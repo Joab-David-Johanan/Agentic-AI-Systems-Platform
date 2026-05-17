@@ -63,8 +63,8 @@ FILES = {
     "outputs/.gitkeep": "",
     "pyproject.toml": (
         "[build-system]\n"
-        'requires = ["setuptools>=68", "wheel"]\n'
-        'build-backend = "setuptools.backends.legacy:build"\n'
+        'requires = ["setuptools>=61", "wheel"]\n'
+        'build-backend = "setuptools.build_meta"\n'
         "\n"
         "[project]\n"
         'name = "research_system"\n'
