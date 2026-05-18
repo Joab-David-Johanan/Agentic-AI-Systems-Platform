@@ -8,7 +8,7 @@ os.makedirs(LOGS_DIR, exist_ok=True)
 
 # make the log file
 LOG_FILE = os.path.join(
-    LOGS_DIR, f"log_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
+    LOGS_DIR, f"log_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
 )
 
 
