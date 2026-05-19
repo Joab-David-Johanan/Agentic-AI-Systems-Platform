@@ -46,7 +46,7 @@ git rm --cached -r <directory>
 - Without ***editable install*** your imports are fragile, they break depending on where Python was launched from.
     - Python can import only packages it can see - meaning the folder must be on its search path (sys.path)
     - By default, Python adds your current working directory to the path.
-    
+
 
 - When you have a `pyproject.toml` file and run the command `pip install -e .` you are using ***editable install*** where Python adds `src/` to `sys.path` and it is completed bypassed as import path.
 - `research_system` becomes the top-level package and src is completely invisible to Python.
@@ -553,3 +553,426 @@ For the uv lockfile:
 ```bash
 chore: add uv lockfile for reproducible installs
 ```
+
+---
+
+## Branching Strategy
+
+#### Q. What branch strategy should this project use?
+
+Use this as the normal workflow:
+
+```text
+feature branches -> dev -> main
+```
+
+Meaning:
+
+```text
+main = production/stable branch
+dev = integration branch for testing features together
+feat/* = individual feature branches
+```
+
+Example branches:
+
+```text
+main
+dev
+feat/utils
+feat/tools
+feat/agents-and-chains
+feat/pipeline
+```
+
+Why:
+
+- `main` should stay stable and production-ready.
+- feature branches keep individual work isolated.
+- `dev` lets multiple features be tested together before they go to `main`.
+- this is easier to understand than cherry-picking many commits later.
+- it looks more like a real team workflow than committing everything directly to `main`.
+
+#### Q. What is the normal workflow from new feature to production?
+
+Step 1: Start from the latest `main`.
+
+```bash
+git checkout main
+git pull origin main
+```
+
+Why:
+
+- This makes sure the new work starts from the latest stable code.
+
+Step 2: Create a feature branch.
+
+```bash
+git checkout -b feat/tools
+```
+
+Why:
+
+- A feature branch isolates one focused piece of work.
+- Examples: `feat/utils`, `feat/tools`, `feat/agents-and-chains`, `feat/pipeline`.
+
+Step 3: Make changes and commit them.
+
+```bash
+git status
+git add <files>
+git commit -m "feat: add web search and scraping tools"
+```
+
+Why:
+
+- `git status` shows what changed.
+- `git add` stages the exact files you want in the commit.
+- `git commit` creates a meaningful checkpoint.
+
+Step 4: Push the feature branch.
+
+```bash
+git push -u origin feat/tools
+```
+
+Why:
+
+- This publishes the branch to GitHub.
+- `-u` links the local branch to the remote branch, so future pushes can use just `git push`.
+
+Step 5: Open a PR from the feature branch into `dev`.
+
+```text
+base: dev
+compare: feat/tools
+```
+
+Why:
+
+- `dev` is where features are integrated.
+- This keeps `main` clean until the full system has been tested.
+
+Step 6: Merge the feature PR into `dev`.
+
+Why:
+
+- Now the feature is part of the integrated development version.
+- Other features can be tested together with it.
+
+Step 7: Test the full app on `dev`.
+
+```bash
+git checkout dev
+git pull origin dev
+uv sync
+uv run python -m compileall src main.py ui
+uv run python main.py
+```
+
+Why:
+
+- `dev` contains the combined feature work.
+- This is where integration bugs are most likely to appear.
+- `uv sync` makes sure the environment matches the project metadata.
+- `compileall` catches syntax/import issues early.
+
+Step 8: Open a PR from `dev` into `main`.
+
+```text
+base: main
+compare: dev
+```
+
+Why:
+
+- This promotes the tested integrated version to production/stable.
+- The PR should explain what was added, what was tested, and any known limitations.
+
+Step 9: Merge the PR into `main`.
+
+Why:
+
+- `main` now contains the production-ready version.
+- GitHub contributions usually count commits once they land on the default branch, commonly `main`.
+
+#### Q. What does `git push -u origin feat/tools` actually do?
+
+Command:
+
+```bash
+git push -u origin feat/tools
+```
+
+Meaning:
+
+```text
+local branch:  feat/tools
+remote repo:   origin
+remote branch: origin/feat/tools
+```
+
+This command takes the local branch named:
+
+```text
+feat/tools
+```
+
+and pushes it to the remote repository named:
+
+```text
+origin
+```
+
+On GitHub, this creates or updates a branch also called:
+
+```text
+feat/tools
+```
+
+In your local Git metadata, Git refers to the GitHub copy as:
+
+```text
+origin/feat/tools
+```
+
+So the relationship becomes:
+
+```text
+local feat/tools -> remote origin/feat/tools
+```
+
+#### Q. What is `origin`?
+
+`origin` is Git's default nickname for the remote GitHub repository.
+
+Check it with:
+
+```bash
+git remote -v
+```
+
+Example output:
+
+```text
+origin  https://github.com/your-username/Multi-Agent-Research-System.git (fetch)
+origin  https://github.com/your-username/Multi-Agent-Research-System.git (push)
+```
+
+Why:
+
+- Writing the full GitHub URL every time would be annoying.
+- Git uses `origin` as a short name for that remote repository.
+
+#### Q. What does `-u` mean?
+
+`-u` means:
+
+```text
+set upstream
+```
+
+It tells Git:
+
+```text
+My local feat/tools branch should track origin/feat/tools.
+```
+
+After this, Git remembers:
+
+```text
+feat/tools tracks origin/feat/tools
+```
+
+Why:
+
+- Future pushes can use just `git push`.
+- Future pulls can use just `git pull`.
+- Git knows which remote branch the current local branch should sync with.
+
+Before upstream is set, you usually need:
+
+```bash
+git push origin feat/tools
+```
+
+After upstream is set, while you are on `feat/tools`, you can use:
+
+```bash
+git push
+git pull
+```
+
+Git understands:
+
+```text
+push local feat/tools to origin/feat/tools
+pull origin/feat/tools into local feat/tools
+```
+
+#### Q. What is local vs remote?
+
+Local branch:
+
+```text
+feat/tools
+```
+
+This branch lives on your machine. It is the branch you edit, commit to, and test locally.
+
+Remote repository:
+
+```text
+origin
+```
+
+This is the GitHub repository your local repo is connected to.
+
+Remote branch:
+
+```text
+origin/feat/tools
+```
+
+This is Git's local reference to the branch on GitHub. It represents what GitHub had the last time you fetched or pushed.
+
+The mental model:
+
+```text
+feat/tools        = your editable local branch
+origin            = nickname for the GitHub repo
+origin/feat/tools = your local reference to the GitHub branch
+```
+
+#### Q. How do I check which remote branch my local branch tracks?
+
+Command:
+
+```bash
+git branch -vv
+```
+
+Example output:
+
+```text
+* feat/tools  abc1234 [origin/feat/tools] feat: add tool integrations
+  main        def5678 [origin/main] docs: update README
+```
+
+Meaning:
+
+- `feat/tools` is the current local branch.
+- `[origin/feat/tools]` is the upstream branch it tracks.
+- `main` tracks `origin/main`.
+
+Why:
+
+- This helps confirm that pushes and pulls are going to the branch you expect.
+- It is useful when working with many feature branches.
+
+#### Q. Should I use a release branch?
+
+For this project right now, usually no.
+
+The simpler workflow is:
+
+```text
+feat/* -> dev -> main
+```
+
+A release branch is useful later when the project has a real release process:
+
+```text
+dev -> release/v0.1.0 -> main
+```
+
+Use a release branch when:
+
+- you are preparing a versioned release
+- you need a QA/staging freeze
+- `dev` needs to keep moving while the release is stabilized
+- you need last-minute release fixes before production
+
+Commands:
+
+```bash
+git checkout main
+git pull origin main
+git checkout -b release/v0.1.0
+git merge dev
+git push -u origin release/v0.1.0
+```
+
+Then open a PR:
+
+```text
+base: main
+compare: release/v0.1.0
+```
+
+Why:
+
+- `release/v0.1.0` becomes a stabilization branch.
+- Only release fixes should go into it.
+- After it is merged into `main`, tag the release.
+
+Tag a release from `main`:
+
+```bash
+git checkout main
+git pull origin main
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+Why:
+
+- A tag marks an exact production version.
+- Tags are useful for changelogs, release notes, and deployment history.
+
+#### Q. Should I cherry-pick feature commits into `main`?
+
+Usually no.
+
+Cherry-picking is useful as an exception, not the normal workflow.
+
+Use cherry-pick when:
+
+- one urgent bugfix from `dev` must go to `main`
+- a branch contains too much unrelated work
+- you need one specific commit without merging the whole branch
+
+Command:
+
+```bash
+git checkout main
+git pull origin main
+git cherry-pick <commit-hash>
+git push origin main
+```
+
+Why:
+
+- `git cherry-pick` copies one commit onto the current branch.
+- It is powerful but can create duplicate commits and messy history if overused.
+- For normal feature delivery, prefer PRs and merges.
+
+#### Q. What is the best workflow for this project today?
+
+Use this:
+
+```text
+feat/utils -> dev
+feat/tools -> dev
+feat/agents-and-chains -> dev
+feat/pipeline -> dev
+dev -> main
+```
+
+Why:
+
+- Each feature stays understandable.
+- `dev` proves the pieces work together.
+- `main` stays stable.
+- The GitHub history tells a clear engineering story.
