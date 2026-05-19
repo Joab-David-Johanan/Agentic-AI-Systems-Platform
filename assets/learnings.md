@@ -453,3 +453,103 @@ Why:
 - `pyproject.toml` says what dependencies the project needs.
 - `uv.lock` records exact versions for reproducible installs.
 - `.venv/` is local machine output and can be recreated with `uv sync`.
+
+---
+
+## Conventional Commit Messages
+
+#### Q. What commit message should I use for `uv.lock`?
+
+If only adding the lockfile:
+
+```bash
+chore: add uv lockfile for reproducible installs
+```
+
+If the commit also changes the project from Conda or manual dependency management to uv:
+
+```bash
+chore: migrate dependency management to uv
+```
+
+#### Q. What are common conventional commit types?
+
+Use `feat` when adding a new user-visible capability:
+
+```bash
+feat: add LangGraph orchestration pipeline
+```
+
+Use `fix` when correcting a bug:
+
+```bash
+fix: handle missing Tavily API key gracefully
+```
+
+Use `docs` for README files, learning notes, architecture notes, or documentation-only changes:
+
+```bash
+docs: update README quick start instructions
+```
+
+Use `chore` for tooling, dependency management, config, or repo maintenance:
+
+```bash
+chore: add uv lockfile for reproducible installs
+```
+
+Use `test` when adding or updating tests:
+
+```bash
+test: add unit tests for web search tool
+```
+
+Use `refactor` when changing code structure without changing behavior:
+
+```bash
+refactor: split research pipeline into reusable workflow steps
+```
+
+Use `style` for formatting-only changes:
+
+```bash
+style: format code with ruff
+```
+
+Use `build` for packaging or build-system changes:
+
+```bash
+build: update project packaging configuration
+```
+
+Use `ci` for CI/CD configuration:
+
+```bash
+ci: add GitHub Actions test workflow
+```
+
+Use `perf` for performance improvements:
+
+```bash
+perf: cache scraped content to reduce repeated requests
+```
+
+#### Q. What commit messages fit the current project cleanup?
+
+For the README rewrite:
+
+```bash
+docs: rewrite README around agentic platform architecture
+```
+
+For the uv learning notes:
+
+```bash
+docs: add uv environment and dependency workflow notes
+```
+
+For the uv lockfile:
+
+```bash
+chore: add uv lockfile for reproducible installs
+```
