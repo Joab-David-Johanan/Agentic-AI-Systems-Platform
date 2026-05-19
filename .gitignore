@@ -217,8 +217,5 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# asset files
-assets/learnings.md
-
 # logs
 logs/
