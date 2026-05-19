@@ -1,307 +1,492 @@
-# Multi-Agent Research System
+# Agentic AI Systems Platform
 
-A flexible multi-agent research framework built on LangChain for automated information gathering, synthesis, and analysis. The system uses specialized agents to search the web, process research documents, and generate comprehensive summaries from multiple sources.
+A production-oriented multi-agent AI infrastructure platform for research, automation, and knowledge workflows.
 
-## Table of Contents
+This repository is structured as an extensible agentic systems platform, not a single niche application. The current implementation starts with a research workflow because research is a useful first domain for testing search, scraping, synthesis, and critique. The long-term architecture is designed so additional agents and workflows can be added for operations, compliance, production monitoring, domain copilots, knowledge retrieval, and business automation.
 
-- [Quick Start](#quick-start)
-- [Architecture](#architecture)
-- [Project Structure](#project-structure)
-- [Dependencies](#dependencies)
-- [Roadmap](#roadmap)
-- [Contributing](#contributing)
-- [License](#license)
+The core identity of this project is reliable AI systems engineering:
 
-## Quick Start
+- orchestration
+- retrieval
+- tool use
+- observability
+- evaluation
+- retries and fallbacks
+- streaming
+- deployment
+- modular agent design
 
-```bash
-# Clone the repository
-git clone <repository-url>
-cd Multi-Agent-Research-System
-```
+## Current Status
 
-```bash
-# Create a Python environment
-conda create -n agent-env python=3.10
-conda activate agent-env
-```
+### Implemented
 
-```bash
-# Install the package in development mode
-pip install -e .
-```
+- Python package using a `src/` layout
+- `pyproject.toml` project configuration
+- uv-based local environment workflow
+- Editable install support for clean imports
+- Modular agent, tool, chain, pipeline, model, and utility folders
+- LangChain-based search agent
+- LangChain-based research/scraping agent
+- Tavily web search integration
+- URL scraping and readable text extraction
+- Report-writing chain
+- Critic/review chain
+- End-to-end research workflow as the first platform use case
+- Logging utility
+- Custom exception utility
+- Environment variable loading through `.env`
 
-If any runtime requirements are missing after the editable install, install the listed dependencies as needed:
+### Planned
 
-```bash
-pip install -r requirements.txt
-```
+- LangGraph orchestration layer
+- Streaming responses
+- Adaptive retrieval
+- Vector search and RAG
+- Evaluation pipelines
+- Observability and tracing
+- Retry and fallback systems
+- Caching layer
+- Async processing
+- Tool registry
+- Streamlit demo UI
+- FastAPI backend
+- Docker deployment
+- CI/CD pipeline
 
-Create a `.env` file with required credentials:
+## Core Features
 
-```bash
-echo "OPENAI_API_KEY=your_key_here" > .env
-echo "TAVILY_API_KEY=your_key_here" >> .env
-```
+### Platform Capabilities
 
-The repository includes a Streamlit UI file at `ui/app.py`, but the UI is not yet ready for production use.
+- Multi-agent orchestration
+- Domain-specific agent composition
+- Tool integrations
+- Search and scraping workflows
+- Structured synthesis and critique
+- Modular pipelines
+- Clean package imports through editable install
+- Environment-based configuration
 
-### Example Usage
+### Reliability Features
 
-```python
-from research_system.pipelines.research_pipeline import run_research_pipeline
+Current and planned reliability features include:
 
-result = run_research_pipeline(topic="What are recent developments in quantum computing?")
-print(result)
-```
+- structured logging
+- retries with backoff
+- timeouts for external tools
+- fallback providers
+- caching
+- monitoring
+- tracing
+- token and cost tracking
+- evaluation datasets
+- hallucination checks
+- source-grounding checks
+- CI-based test execution
 
-### Custom Agent Example
+### Retrieval Features
 
-```python
-from research_system.agents.search_agent import build_search_agent
+Current:
 
-search_agent = build_search_agent()
-results = search_agent.invoke({
-    "messages": [
-        (
-            "user",
-            "Find recent, reliable, and detailed information about: machine learning trends 2024",
-        )
-    ]
-})
-print(results)
-```
+- live web search
+- URL scraping
+- readable text extraction
+
+Planned:
+
+- vector search
+- semantic retrieval
+- adaptive retrieval strategy
+- source ranking
+- document chunking
+- citation extraction
+- persistent knowledge stores
+
+## Example Use Cases
+
+The platform architecture is intended to support multiple domains without changing the core system design:
+
+- Competitive intelligence
+- Research synthesis
+- Regulatory intelligence
+- Compliance monitoring
+- Workflow automation
+- Operations assistants
+- Production monitoring agents
+- Domain-specific copilots
+- Knowledge retrieval systems
+- Automated report generation
+- Internal knowledge-base assistants
 
 ## Architecture
 
-The system follows a modular agent-based architecture where each component has a specific responsibility:
+### Current Implementation
 
-### Core Components
+The first implemented workflow is a research pipeline. It proves the basic platform pieces: an agent can use tools, gather external information, synthesize an answer, and critique the output.
 
-1. **Agents** - Specialized autonomous units that perform specific tasks
-   - Search Agent: Queries external sources via Tavily API and web scraping
-   - Research Agent: Processes and analyzes research documents
-   - Coordinator: Orchestrates multi-step research workflows
+```mermaid
+flowchart TD
+    User["User Query"] --> Pipeline["Workflow Pipeline"]
+    Pipeline --> SearchAgent["Search Agent"]
+    SearchAgent --> SearchTool["Web Search Tool"]
+    SearchTool --> SearchResults["Search Results"]
 
-2. **Chains** - LangChain expressions that combine LLM operations
-   - Summary Chain: Generates concise summaries from research data
-   - Analysis Chain: Performs deeper content analysis and synthesis
+    SearchResults --> ResearchAgent["Research Agent"]
+    ResearchAgent --> ScraperTool["Scraping Tool"]
+    ScraperTool --> ExtractedContent["Extracted Content"]
 
-3. **Pipelines** - End-to-end workflows combining agents and chains
-   - Research Pipeline: Orchestrates the complete research process
-
-4. **Tools** - Pluggable utilities for specific operations
-   - Web Search: Tavily API integration for real-time search
-   - Document Processing: BeautifulSoup and Trafilatura for content extraction
-
-5. **Models** - LLM configuration and selection logic
-   - Support for OpenAI models and extensible provider architecture
-
-### Data Flow
-
+    SearchResults --> Writer["Writer Chain"]
+    ExtractedContent --> Writer
+    Writer --> Draft["Structured Output"]
+    Draft --> Critic["Critic Chain"]
+    Critic --> Feedback["Quality Feedback"]
 ```
-User Query
-    |
-    v
-Search Agent --> Web/API sources
-    |
-    v
-Document Processing --> Extracted content
-    |
-    v
-Analysis & Summarization --> Research Agent
-    |
-    v
-Output --> UI / API
+
+### Target Platform Architecture
+
+The target architecture keeps the platform stable while allowing domain workflows to change.
+
+```mermaid
+flowchart TD
+    Entry["User / API / UI"] --> Router["Task Router"]
+    Router --> Orchestrator["Agent Orchestrator"]
+
+    Orchestrator --> Planner["Planner Agent"]
+    Orchestrator --> Retrieval["Retrieval Agent"]
+    Orchestrator --> Domain["Domain Agent"]
+    Orchestrator --> ToolUser["Tool-Using Agent"]
+    Orchestrator --> Writer["Writer Agent"]
+    Orchestrator --> Critic["Critic Agent"]
+    Orchestrator --> Evaluator["Evaluation Agent"]
+
+    Retrieval --> VectorDB["Vector Store"]
+    Retrieval --> Web["Web Search"]
+    ToolUser --> Tools["Tool Registry"]
+    Domain --> DomainConfig["Domain Configuration"]
+
+    Writer --> Output["Structured Output"]
+    Critic --> Revision["Revision Loop"]
+    Evaluator --> Scores["Quality Metrics"]
+
+    Orchestrator --> Cache["Cache"]
+    Orchestrator --> Observability["Logs / Traces / Metrics"]
+    Orchestrator --> Storage["Persistent Storage"]
 ```
 
 ## Project Structure
 
-```
+```text
 .
-├── src/research_system/           # Main package
-│   ├── agents/                    # Agent implementations
-│   │   ├── research_agent.py      # Document analysis agent
-│   │   └── search_agent.py        # Web search agent
-│   ├── chains/                    # LangChain chain definitions
-│   │   └── summary_chain.py       # Summarization pipeline
-│   ├── config/                    # Configuration management
-│   ├── models/                    # LLM model selection
-│   │   └── model_selection.py     # Model initialization
-│   ├── pipelines/                 # Complete workflows
-│   │   └── research_pipeline.py   # Main research orchestration
-│   ├── tools/                     # Utility tools
-│   │   └── tool.py                # Tool definitions
-│   └── utils/                     # Helper functions
-│       └── logger.py              # Logging configuration
-├── ui/                            # Streamlit web interface
-│   └── app.py                     # Main UI application
-├── tests/                         # Test suite
-├── assets/                        # Documentation and notes
-│   ├── progress.md                # Development progress
-│   └── learnings.md               # Technical learnings
-├── pyproject.toml                 # Project configuration and dependencies
-├── requirements.txt               # Python dependencies
-└── README.md                      # This file
+|-- assets/
+|   |-- learnings.md
+|   `-- progress.md
+|-- outputs/
+|   `-- .gitkeep
+|-- src/
+|   `-- research_system/
+|       |-- agents/
+|       |   |-- research_agent.py
+|       |   `-- search_agent.py
+|       |-- chains/
+|       |   `-- summary_chain.py
+|       |-- config/
+|       |   `-- __init__.py
+|       |-- models/
+|       |   `-- model_selection.py
+|       |-- pipelines/
+|       |   `-- research_pipeline.py
+|       |-- tools/
+|       |   `-- tool.py
+|       `-- utils/
+|           |-- custom_exception.py
+|           `-- logger.py
+|-- tests/
+|   `-- __init__.py
+|-- ui/
+|   |-- __init__.py
+|   `-- app.py
+|-- .env.example
+|-- .gitignore
+|-- main.py
+|-- pyproject.toml
+|-- README.md
+|-- requirements.txt
+`-- uv.lock
 ```
 
-## Installation
+Note: `ui/app.py` currently exists as a placeholder. The Streamlit UI is a roadmap item, not a finished feature yet.
 
-### Requirements
+## Quick Start
 
-- Python 3.10 or higher
-- pip or conda package manager
-- API keys for OpenAI and Tavily (optional, for full functionality)
-
-### Setup Steps
-
-1. Clone and navigate to the project:
-   ```bash
-   git clone <repository-url>
-   cd Multi-Agent-Research-System
-   ```
-
-2. Create a virtual environment:
-   ```bash
-   conda create -n agent-env python=3.10
-   conda activate agent-env
-   ```
-
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. Install the package in development mode:
-   ```bash
-   pip install -e .
-   ```
-
-5. Configure environment variables:
-   ```bash
-   # Create .env file
-   echo "OPENAI_API_KEY=your_key_here" > .env
-   echo "TAVILY_API_KEY=your_key_here" >> .env
-   ```
-
-## Usage
-
-### Running the Web UI
+### 1. Clone the Repository
 
 ```bash
-streamlit run ui/app.py
+git clone <your-github-repo-url>
+cd Multi-Agent-Research-System
 ```
 
-This launches a web interface where you can input research queries and interact with the system.
+### 2. Install uv
 
-### Using the Research Pipeline Programmatically
+If uv is not installed, install it first:
+
+```bash
+pip install uv
+```
+
+You can also use the official uv installer from the uv documentation.
+
+### 3. Create a Python 3.12 Environment
+
+```bash
+uv venv --python 3.12
+```
+
+This creates a local `.venv/` directory for the project.
+
+### 4. Install Dependencies
+
+```bash
+uv sync
+```
+
+On Windows, if certificate validation fails:
+
+```bash
+uv sync --native-tls
+```
+
+This installs dependencies from `pyproject.toml` and `uv.lock`. It also installs the local package in editable mode so imports work cleanly across scripts, tests, notebooks, and future UI/API layers.
+
+### 5. Configure Environment Variables
+
+Create a `.env` file in the project root:
+
+```bash
+OPENAI_API_KEY=your_openai_api_key_here
+TAVILY_API_KEY=your_tavily_api_key_here
+```
+
+Use `.env.example` as the reference file.
+
+### 6. Run the Current Workflow
+
+```bash
+uv run python main.py
+```
+
+Windows TLS fallback:
+
+```bash
+uv run --native-tls python main.py
+```
+
+## Programmatic Usage
+
+The current implemented workflow is the research pipeline:
 
 ```python
-from research_system.pipelines.research_pipeline import ResearchPipeline
+from research_system.pipelines.research_pipeline import run_research_pipeline
 
-pipeline = ResearchPipeline()
-result = pipeline.run(query="What are recent developments in quantum computing?")
-print(result)
+result = run_research_pipeline(
+    "What are recent developments in AI factories in Germany?"
+)
+
+print(result["report"])
+print(result["feedback"])
 ```
 
-### Custom Agent Usage
+Future workflows can follow the same platform pattern:
 
 ```python
-from research_system.agents.search_agent import SearchAgent
+# examples of planned platform-level extension points
+from research_system.pipelines.research_pipeline import run_research_pipeline
 
-search_agent = SearchAgent()
-results = search_agent.search("machine learning trends 2024")
+# future examples:
+# from research_system.pipelines.operations_pipeline import run_operations_pipeline
+# from research_system.pipelines.compliance_pipeline import run_compliance_pipeline
+# from research_system.pipelines.production_pipeline import run_production_pipeline
 ```
 
-## Dependencies
+## Clean Imports and Editable Install
 
-### Core Framework
+This project uses a `src/` layout:
 
-- **langchain** (>=0.2.0) - LLM orchestration and chain management
-- **langchain-core** (>=0.2.0) - Core LangChain abstractions
-- **langchain-community** (>=0.2.0) - Community integrations
-- **langchain-openai** (>=0.1.0) - OpenAI model support
+```text
+src/research_system/
+```
 
-### Search and Web Tools
+After running:
 
-- **tavily-python** (>=0.3.0) - Real-time web search API
-- **beautifulsoup4** (>=4.12.0) - HTML parsing
-- **trafilatura** - Content extraction from web pages
-- **requests** (>=2.31.0) - HTTP library
-- **lxml** (>=5.0.0) - XML/HTML processing
+```bash
+uv sync
+```
 
-### Interface and Utilities
+the package is installed into the project environment. That means imports should use:
 
-- **streamlit** (>=1.0.0) - Web UI framework
-- **python-dotenv** (>=1.0.0) - Environment variable management
-- **rich** (>=13.7.0) - Terminal output formatting
+```python
+from research_system.pipelines.research_pipeline import run_research_pipeline
+```
 
-### Development Requirements
+not:
 
-- **pytest** - Testing framework (recommended)
-- **black** - Code formatting (recommended)
-- **mypy** - Type checking (recommended)
+```python
+from src.research_system.pipelines.research_pipeline import run_research_pipeline
+```
+
+This is important because Python should treat `research_system` as the top-level package. For notebooks, make sure the selected Jupyter kernel is the Python interpreter inside `.venv/`.
+
+## Development Commands
+
+Create or recreate the environment:
+
+```bash
+uv venv --python 3.12
+```
+
+Install dependencies and the local package:
+
+```bash
+uv sync
+```
+
+Run a command inside the project environment:
+
+```bash
+uv run python main.py
+```
+
+Add a runtime dependency:
+
+```bash
+uv add package-name
+```
+
+Example:
+
+```bash
+uv add langgraph
+```
+
+Add a development dependency:
+
+```bash
+uv add --dev pytest ruff mypy
+```
+
+Run tests:
+
+```bash
+uv run pytest
+```
+
+Compile-check Python files:
+
+```bash
+uv run python -m compileall src main.py ui
+```
+
+## Deployment
+
+Planned deployment options:
+
+- Docker
+- Docker Compose
+- FastAPI service layer
+- Streamlit demo UI
+- GitHub Actions CI/CD
+- cloud deployment guide
+
+Potential cloud targets:
+
+- AWS ECS
+- AWS Lambda
+- Azure Container Apps
+- Google Cloud Run
+- Render
+- Railway
+
+## Technology Stack
+
+Current:
+
+- Python 3.12
+- uv
+- LangChain
+- LangChain OpenAI
+- Tavily
+- BeautifulSoup
+- Trafilatura
+- Readability
+- Requests
+- python-dotenv
+- Rich
+
+Planned:
+
+- LangGraph
+- Streamlit
+- FastAPI
+- Chroma, Qdrant, or pgvector
+- LangSmith or OpenTelemetry
+- Docker
+- GitHub Actions
+- pytest
+- ruff
+- mypy
 
 ## Roadmap
 
-### Phase 1: Foundation (Current)
+### Phase 1: Foundation
 
-- [x] Core agent architecture
-- [x] Web search integration
-- [x] Document processing pipeline
-- [x] Summary generation
-- [x] Streamlit UI
+- [x] Python package structure
+- [x] uv environment workflow
+- [x] Web search tool
+- [x] Web scraping tool
+- [x] Search agent
+- [x] Research agent
+- [x] Writer chain
+- [x] Critic chain
+- [x] End-to-end first workflow
+- [ ] Replace hardcoded demo in `main.py` with CLI arguments
+- [ ] Add tests for tools, chains, and pipeline logic
 
-### Phase 2: Enhanced Capabilities
+### Phase 2: Platform Orchestration
 
-- [ ] **Caching Layer**: Implement Redis-based caching for search results and processed documents to reduce API calls and improve response times
-- [ ] **Evaluation Pipeline**: Build metrics and benchmarks for evaluating research quality, accuracy, and relevance of generated summaries
-- [ ] **Multi-Source Integration**: Add support for academic databases, news feeds, and domain-specific APIs
-- [ ] **Persistent Storage**: Database integration for storing research history and results
+- [ ] Convert pipeline execution to LangGraph
+- [ ] Add typed graph state
+- [ ] Add router/planner node
+- [ ] Add domain workflow configuration
+- [ ] Add critic/revision loop
+- [ ] Add tool failure recovery
 
-### Phase 3: Production Readiness
+### Phase 3: Retrieval and Grounding
 
-- [ ] **Guardrails System**: Implement content validation, fact-checking integration, and quality thresholds for outputs
-- [ ] **Observability Dashboard**: Real-time monitoring of agent performance, latency metrics, and API usage
-- [ ] **Structured Logging**: Enhanced logging with structured output for debugging and analytics
-- [ ] **Error Recovery**: Resilient agent workflows with retry logic and fallback strategies
+- [ ] Add document chunking
+- [ ] Add vector database
+- [ ] Add semantic retrieval
+- [ ] Add adaptive retrieval strategy
+- [ ] Add citation extraction
+- [ ] Add source quality scoring
+- [ ] Add answer grounding checks
 
-### Phase 4: Advanced Features
+### Phase 4: Platform Interfaces
 
-- [ ] **Fine-tuning Pipeline**: Support for training custom models on domain-specific research data
-- [ ] **Collaborative Research**: Multi-user support with shared research projects
-- [ ] **Export Formats**: Generate reports in multiple formats (PDF, Markdown, JSON)
-- [ ] **Vector Search**: Semantic search across research repositories using embeddings
+- [ ] Build Streamlit UI
+- [ ] Add FastAPI backend
+- [ ] Add streaming responses
+- [ ] Add export to Markdown or PDF
+- [ ] Add saved workflow history
 
-## Development
+### Phase 5: Production Readiness
 
-### Running Tests
-
-```bash
-pytest tests/
-```
-
-### Code Formatting
-
-```bash
-black src/ tests/
-```
-
-### Type Checking
-
-```bash
-mypy src/
-```
-
-## Contributing
-
-Contributions are welcome. Please:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/your-feature`)
-3. Commit changes with clear messages
-4. Push to your fork and submit a pull request
+- [ ] Add pytest test suite
+- [ ] Add ruff formatting and linting
+- [ ] Add mypy type checking
+- [ ] Add Dockerfile
+- [ ] Add GitHub Actions CI
+- [ ] Add structured observability
+- [ ] Add evaluation benchmark
+- [ ] Add caching and fallback providers
 
 ## License
 
-This project is licensed under the Apache License 2.0 - see the LICENSE file for details.
+This project is licensed under the Apache License 2.0. See `LICENSE` for details.
