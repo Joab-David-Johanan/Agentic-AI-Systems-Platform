@@ -1919,3 +1919,441 @@ Why:
 
 - These commands cover installability, syntax, formatting, linting, typing, tests, and coverage.
 - Together, they form the local equivalent of CI.
+
+---
+
+## Troubleshooting CI and Pre-Commit Errors
+
+#### Q. What should I do when CI fails with `I001 Import block is un-sorted or un-formatted`?
+
+Example error:
+
+```text
+I001 [*] Import block is un-sorted or un-formatted
+ --> tests/test_middleware.py:1:1
+```
+
+What it means:
+
+- Ruff found imports that are not ordered according to the project's linting rules.
+- This usually happens when imports are added manually and not passed through the formatter/linter.
+- In this project, Ruff handles both import sorting and linting.
+
+Fix it locally:
+
+```bash
+uv run ruff check . --fix
+```
+
+Windows direct `.venv` version:
+
+```powershell
+.venv\Scripts\ruff.exe check . --fix
+```
+
+Why:
+
+- `ruff check .` runs lint checks.
+- `--fix` lets Ruff safely rewrite files for fixable issues.
+- Import ordering errors like `I001` are usually fixable automatically.
+
+Then run:
+
+```bash
+uv run ruff check .
+```
+
+Why:
+
+- This confirms there are no remaining lint errors.
+- If CI failed on Ruff, you want the same Ruff command to pass locally before pushing again.
+
+Then stage and commit the files Ruff changed:
+
+```bash
+git status
+git add <changed-files>
+git commit -m "style: sort imports with ruff"
+git push
+```
+
+Why:
+
+- Ruff modifies files on disk.
+- GitHub CI only sees committed and pushed changes.
+- If you fix locally but do not commit and push, CI will still test the old broken commit.
+
+#### Q. What is the difference between `ruff check` and `ruff format`?
+
+Definition:
+
+`ruff check` is a linting command that detects code-quality issues such as unused imports, import ordering problems, common bug patterns, and style-rule violations.
+
+`ruff format` is a formatting command that rewrites Python files into Ruff's standard code layout, similar to how Black formats code.
+
+Commands:
+
+```bash
+uv run ruff check .
+uv run ruff format --check .
+```
+
+Fix commands:
+
+```bash
+uv run ruff check . --fix
+uv run ruff format .
+```
+
+Why both matter:
+
+- `ruff check` can pass while `ruff format --check` fails.
+- `ruff check` answers: "Is the code lint-clean?"
+- `ruff format --check` answers: "Is the code formatted exactly as expected?"
+- Industry CI pipelines often run both because linting and formatting are different quality gates.
+
+In our project, we saw this situation:
+
+```text
+ruff check: passed
+ruff format --check: failed
+```
+
+The formatter wanted to rewrite:
+
+```text
+src/research_system/pipelines/research_pipeline.py
+tests/test_middleware.py
+tests/test_tools.py
+```
+
+Fix:
+
+```bash
+uv run ruff format .
+uv run ruff check . --fix
+```
+
+Then verify:
+
+```bash
+uv run ruff format --check .
+uv run ruff check .
+```
+
+#### Q. Why did pre-commit fail even though the file looked fixed in VSCode?
+
+Example error:
+
+```text
+src\research_system\utils\custom_exception.py:7: error:
+Incompatible default for argument "error_detail"
+```
+
+What happened:
+
+- The working file had already been fixed.
+- But the fixed file was not staged.
+- Pre-commit detected unstaged files and temporarily stashed them.
+- Then it checked the staged snapshot.
+- The staged snapshot still had the old broken type annotation.
+
+Important concept:
+
+```text
+pre-commit checks what is staged for commit, not only what you can see in VSCode
+```
+
+How to inspect the staged version of a file:
+
+```bash
+git show :src/research_system/utils/custom_exception.py
+```
+
+Why:
+
+- `git show :<path>` shows the version currently staged in the Git index.
+- This is the version pre-commit checks during commit.
+
+How to compare working changes:
+
+```bash
+git diff -- src/research_system/utils/custom_exception.py
+```
+
+How to compare staged changes:
+
+```bash
+git diff --cached -- src/research_system/utils/custom_exception.py
+```
+
+Why:
+
+- `git diff` shows unstaged changes.
+- `git diff --cached` shows staged changes.
+- If a fix appears in `git diff` but not in `git diff --cached`, it is not staged yet.
+
+Fix:
+
+```bash
+git add src/research_system/utils/custom_exception.py
+git commit -m "test: add unit and integration tests"
+```
+
+Why:
+
+- Staging the fixed file updates the commit snapshot.
+- Pre-commit then checks the corrected version.
+
+#### Q. Why did mypy complain about `Exception = None`?
+
+Problem code:
+
+```python
+def __init__(self, message, error_detail: Exception = None):
+    ...
+```
+
+Error meaning:
+
+```text
+default has type "None", argument has type "Exception"
+```
+
+Why:
+
+- The annotation says `error_detail` must be an `Exception`.
+- But the default value is `None`.
+- With `no_implicit_optional = true`, mypy requires you to explicitly say that `None` is allowed.
+
+Correct code:
+
+```python
+def __init__(self, message, error_detail: Exception | None = None):
+    ...
+```
+
+Also update related helper functions:
+
+```python
+def get_detailed_error_message(message, error_detail: Exception | None) -> str:
+    ...
+```
+
+Why:
+
+- `Exception | None` means the value can be either an `Exception` object or `None`.
+- This is the modern Python 3.10+ syntax for optional values.
+- It matches the project's Python 3.12 setup.
+
+Interview-ready definition:
+
+Static type checking is the practice of analyzing source code for type consistency before runtime. Tools like mypy verify that function arguments, return values, and variable assignments follow declared type contracts, which helps catch bugs early and makes large codebases easier to refactor safely.
+
+#### Q. What should I do when pre-commit says it stashed unstaged files?
+
+Example:
+
+```text
+[WARNING] Unstaged files detected.
+[INFO] Stashing unstaged files...
+...
+[INFO] Restored changes...
+```
+
+What it means:
+
+- You had both staged and unstaged changes.
+- Pre-commit temporarily hid the unstaged changes.
+- It checked only the staged files that would be committed.
+- After the hook finished, it restored the unstaged changes.
+
+Why pre-commit does this:
+
+- A commit should be validated exactly as it will be saved.
+- Unstaged changes are not part of the commit.
+- Without stashing, hooks might accidentally pass because of code that is not actually being committed.
+
+What to do:
+
+```bash
+git status
+git diff
+git diff --cached
+```
+
+Then decide:
+
+```bash
+git add <files-needed-for-this-commit>
+git commit -m "type: clear message"
+```
+
+Why:
+
+- If the fix is required for the commit to pass, stage it.
+- If the change is unrelated, leave it unstaged and commit it separately later.
+
+#### Q. What should I do when `git push` says `Everything up-to-date` after a failed commit?
+
+Meaning:
+
+```text
+Everything up-to-date
+```
+
+does not mean your failed commit was pushed.
+
+It means:
+
+```text
+There are no new local commits to push.
+```
+
+Why:
+
+- If `git commit` fails, no commit is created.
+- Therefore `git push` has nothing new to upload.
+
+Correct workflow:
+
+```bash
+git status
+git add <fixed-files>
+git commit -m "your message"
+git push
+```
+
+Check whether a commit was created:
+
+```bash
+git log --oneline -5
+```
+
+Why:
+
+- The latest commit should appear at the top.
+- If your intended commit is not there, it never got created.
+
+#### Q. What should I do when Git cannot create `.git/index.lock`?
+
+Example error:
+
+```text
+fatal: Unable to create '.git/index.lock': Permission denied
+```
+
+What it means:
+
+- Git needs to lock the index while staging or committing.
+- Another Git process may still be running.
+- VSCode, Git Bash, pre-commit, or another terminal may be holding the Git index.
+- On Windows, file locking can also happen briefly after a Git process exits.
+
+Check if a lock file exists:
+
+```powershell
+Test-Path .git\index.lock
+```
+
+Check running Git processes:
+
+```powershell
+Get-Process git -ErrorAction SilentlyContinue
+```
+
+Safe first fix:
+
+```powershell
+Start-Sleep -Seconds 3
+git status
+```
+
+Why:
+
+- If another Git process is finishing, waiting avoids corrupting the index.
+
+If `.git/index.lock` exists but no Git process is running:
+
+```powershell
+Remove-Item .git\index.lock
+```
+
+Important:
+
+- Only remove `.git/index.lock` after confirming no Git process is running.
+- Do not delete `.git/index`.
+- Do not run `git reset --hard` unless you intentionally want to discard changes.
+
+#### Q. What should I run before pushing to avoid CI failures?
+
+Use this full local quality gate:
+
+```bash
+uv sync
+uv run ruff format .
+uv run ruff check . --fix
+uv run ruff format --check .
+uv run ruff check .
+uv run mypy src apps
+uv run pytest --cov --cov-report=term-missing
+```
+
+Windows direct `.venv` version:
+
+```powershell
+.venv\Scripts\ruff.exe format .
+.venv\Scripts\ruff.exe check . --fix
+.venv\Scripts\ruff.exe format --check .
+.venv\Scripts\ruff.exe check .
+.venv\Scripts\mypy.exe src apps
+.venv\Scripts\python.exe -m pytest --cov --cov-report=term-missing
+```
+
+Why:
+
+- `uv sync` makes the environment match `pyproject.toml` and `uv.lock`.
+- `ruff format .` applies formatting.
+- `ruff check . --fix` applies safe lint fixes.
+- `ruff format --check .` confirms formatting is clean.
+- `ruff check .` confirms linting is clean.
+- `mypy src apps` confirms type correctness for the core package and API app.
+- `pytest --cov` confirms behavior and coverage.
+
+Then commit:
+
+```bash
+git status
+git add <changed-files>
+git commit -m "type: clear message"
+git push
+```
+
+#### Q. Why can CI fail even if everything passed locally?
+
+Common reasons:
+
+- You fixed files locally but did not commit them.
+- You committed only some files, but not the files changed by Ruff or pre-commit.
+- CI runs on Linux while local development is on Windows.
+- CI uses `uv.lock` with `--locked`, so an outdated lockfile can fail.
+- Environment variables or secrets differ between local and CI.
+- The local command and CI command are not exactly the same.
+
+How to reduce this risk:
+
+```bash
+git status
+git diff
+git diff --cached
+uv run pre-commit run --all-files
+uv run pytest --cov --cov-report=term-missing
+```
+
+Why:
+
+- `git status` shows what is staged and unstaged.
+- `git diff` shows local unstaged changes.
+- `git diff --cached` shows what will actually be committed.
+- `pre-commit run --all-files` simulates local quality gates across the repo.
+- `pytest --cov` catches behavior and coverage issues before CI.
