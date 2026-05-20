@@ -976,3 +976,946 @@ Why:
 - `dev` proves the pieces work together.
 - `main` stays stable.
 - The GitHub history tells a clear engineering story.
+
+---
+
+## Continuous Integration CI
+
+#### Q. What is CI?
+
+CI means:
+
+```text
+Continuous Integration
+```
+
+Continuous Integration (CI) is a software development practice where code changes are automatically built, tested, and validated upon every commit or pull request to a shared repository. The goal is to detect integration errors early by maintaining a single source of truth and ensuring all changes pass a defined quality gate, typically linting, unit tests, and type checks, before being merged. CI is the first half of the CI/CD pipeline, with CD (Continuous Delivery/Deployment) handling automated release to staging or production environments.
+
+In this project, CI runs on GitHub Actions.
+
+Why:
+
+- It catches broken code before it reaches `main`.
+- It makes every branch follow the same quality gate.
+- It gives reviewers confidence that the project installs, lints, type-checks, and tests cleanly.
+- It is industry standard because teams cannot rely only on "it works on my machine."
+
+The idea:
+
+```text
+developer pushes code -> GitHub Actions starts -> install dependencies -> run checks -> pass/fail result
+```
+
+#### Q. What file defines CI in this project?
+
+The CI workflow file is:
+
+```text
+.github/workflows/ci.yml
+```
+
+Why this path:
+
+- GitHub Actions automatically looks inside `.github/workflows/`.
+- Any `.yml` or `.yaml` file in that folder can define a workflow.
+
+#### Q. Is it `.yaml` or `.yml`?
+
+Both are valid YAML file extensions:
+
+```text
+ci.yml
+ci.yaml
+```
+
+GitHub Actions accepts both.
+
+In this project:
+
+```text
+.github/workflows/ci.yml
+```
+
+Why:
+
+- `.yml` is very common for GitHub Actions workflows.
+- `.yaml` is also correct.
+- The content matters more than the extension, as long as it is valid YAML.
+
+For pre-commit, the convention is:
+
+```text
+.pre-commit-config.yaml
+```
+
+Why:
+
+- That filename is what people expect when using `pre-commit`.
+- It is the standard name shown in the pre-commit documentation and examples.
+
+#### Q. What does the CI YAML file do?
+
+Current workflow:
+
+```yaml
+name: CI
+
+"on":
+  push:
+    branches:
+      - main
+      - dev
+      - "feat/**"
+  pull_request:
+    branches:
+      - main
+      - dev
+
+jobs:
+  test:
+    name: Test and quality checks
+    runs-on: ubuntu-latest
+
+    env:
+      OPENAI_API_KEY: test-openai-key
+      TAVILY_API_KEY: test-tavily-key
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --locked --all-groups
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Type check
+        run: uv run mypy src
+
+      - name: Test with coverage
+        run: uv run pytest --cov --cov-report=term-missing
+```
+
+What each part means:
+
+```yaml
+name: CI
+```
+
+Why:
+
+- This is the workflow name shown in GitHub Actions.
+
+```yaml
+"on":
+```
+
+Why:
+
+- This defines when the workflow runs.
+- It is quoted because YAML parsers can sometimes treat `on` as a boolean-like keyword depending on YAML version/tooling.
+- Quoting it avoids ambiguity.
+
+```yaml
+push:
+  branches:
+    - main
+    - dev
+    - "feat/**"
+```
+
+Why:
+
+- CI runs when code is pushed to `main`.
+- CI runs when integrated development code is pushed to `dev`.
+- CI runs when feature branches like `feat/tools` or `feat/pipeline` are pushed.
+
+```yaml
+pull_request:
+  branches:
+    - main
+    - dev
+```
+
+Why:
+
+- CI runs when opening PRs into `dev`.
+- CI runs when opening PRs into `main`.
+- This supports the workflow:
+
+```text
+feat/* -> dev -> main
+```
+
+```yaml
+runs-on: ubuntu-latest
+```
+
+Why:
+
+- GitHub provides a clean Linux machine for the job.
+- Linux CI is common, fast, and reliable for Python projects.
+- It proves the project can run outside your Windows laptop.
+
+```yaml
+env:
+  OPENAI_API_KEY: test-openai-key
+  TAVILY_API_KEY: test-tavily-key
+```
+
+Why:
+
+- Some imports or configuration may expect these environment variables.
+- CI should not use real secrets for mocked tests.
+- Tests should mock external APIs unless they are explicitly integration tests that require live services.
+
+```yaml
+uses: actions/checkout@v5
+```
+
+Why:
+
+- This downloads the repository code into the GitHub Actions runner.
+- Without checkout, the runner has no project files.
+
+```yaml
+uses: astral-sh/setup-uv@v7
+```
+
+Why:
+
+- This installs uv in the CI environment.
+- It also supports uv caching, making future CI runs faster.
+
+```yaml
+run: uv python install 3.12
+```
+
+Why:
+
+- This ensures Python 3.12 is available.
+- It matches the local project setup.
+
+```yaml
+run: uv sync --locked --all-groups
+```
+
+Why:
+
+- `uv sync` installs dependencies.
+- `--locked` makes CI use `uv.lock` exactly and fail if the lockfile is outdated.
+- `--all-groups` installs development tools such as pytest, pytest-cov, ruff, mypy, and pre-commit dependencies.
+- This is important because CI should be reproducible.
+
+```yaml
+run: uv run ruff check .
+```
+
+Why:
+
+- Runs lint checks.
+- Catches unused imports, bad import ordering, common bug patterns, and style issues.
+
+```yaml
+run: uv run mypy src
+```
+
+Why:
+
+- Runs static type checking on the application source code.
+- Catches type errors before runtime.
+
+```yaml
+run: uv run pytest --cov --cov-report=term-missing
+```
+
+Why:
+
+- Runs the test suite.
+- Measures test coverage.
+- Shows exactly which lines are not covered.
+
+#### Q. What commands should I run locally before pushing?
+
+Run these from the project root:
+
+```bash
+uv sync
+uv run ruff check .
+uv run mypy src
+uv run pytest --cov --cov-report=term-missing
+```
+
+On Windows, if uv has TLS issues:
+
+```bash
+uv sync --native-tls
+```
+
+Why:
+
+- These commands match the CI checks.
+- If they pass locally, CI is more likely to pass on GitHub.
+
+#### Q. Why do industry teams use CI?
+
+Industry teams use CI because:
+
+- many people work on the same codebase
+- code changes can break unrelated parts of the system
+- reviewers need automated proof that basic quality checks passed
+- production branches must stay stable
+- manual testing alone is too slow and unreliable
+
+In this project, CI supports the branching strategy:
+
+```text
+feat/* -> dev -> main
+```
+
+Feature branches can break while being developed, but before they merge into `dev` or `main`, CI should prove they are healthy.
+
+---
+
+## Pre-Commit Hooks
+
+#### Q. What are pre-commit hooks?
+
+Pre-commit hooks are automated validation scripts that execute locally before Git finalizes a commit. They enforce repository standards such as formatting, linting, static analysis, secret checks, file-size checks, and metadata validation at the earliest possible point in the development workflow.
+
+They act as a local quality gate:
+
+```text
+git commit -> pre-commit hooks run -> checks pass -> commit is created
+```
+
+If checks fail:
+
+```text
+git commit -> hooks fail -> fix files -> git add again -> commit again
+```
+
+Why:
+
+- CI catches issues after pushing.
+- Pre-commit catches issues before pushing.
+- This reduces failed CI runs by catching simple problems locally.
+- It keeps formatting and repository hygiene consistent across contributors.
+- It prevents avoidable review comments about whitespace, imports, line endings, or formatting.
+- It supports professional team workflows where code quality rules are enforced consistently.
+
+#### Q. What file configures pre-commit in this project?
+
+The config file is:
+
+```text
+.pre-commit-config.yaml
+```
+
+Why:
+
+- This file tells pre-commit which hooks to install and run.
+- It is committed to the repo so every developer can use the same checks.
+
+#### Q. How do I install pre-commit for this project?
+
+Step 1: Make sure dev dependencies are installed.
+
+```bash
+uv sync
+```
+
+Why:
+
+- `pre-commit` is a dev dependency in `pyproject.toml`.
+- `uv sync` installs it into `.venv/`.
+
+Step 2: Install the Git hook.
+
+```bash
+uv run pre-commit install
+```
+
+Alternative if `.venv` is activated:
+
+```bash
+pre-commit install
+```
+
+Why:
+
+- This writes a hook file into:
+
+```text
+.git/hooks/pre-commit
+```
+
+- `.git/hooks/pre-commit` is local to your machine.
+- It is not committed to Git.
+- Every new machine must run `pre-commit install` once.
+
+#### Q. How do I run pre-commit manually?
+
+Run all hooks on all files:
+
+```bash
+uv run pre-commit run --all-files
+```
+
+Run only changed files during commit:
+
+```bash
+git commit -m "your message"
+```
+
+Why:
+
+- `pre-commit run --all-files` is useful after setting up hooks or changing config.
+- Normal commits only check the relevant files, which is faster.
+
+#### Q. What hooks are configured?
+
+Current hooks:
+
+```text
+trailing-whitespace
+end-of-file-fixer
+check-yaml
+check-toml
+check-added-large-files
+mixed-line-ending
+ruff-check
+ruff-format
+mypy
+```
+
+Why each exists:
+
+```text
+trailing-whitespace
+```
+
+- removes useless spaces at line ends
+- prevents noisy diffs
+
+```text
+end-of-file-fixer
+```
+
+- ensures files end with one newline
+- avoids formatting inconsistencies across editors
+
+```text
+check-yaml
+```
+
+- validates YAML syntax
+- important for GitHub Actions and pre-commit config files
+
+```text
+check-toml
+```
+
+- validates TOML syntax
+- important for `pyproject.toml`
+
+```text
+check-added-large-files
+```
+
+- prevents accidentally committing large files
+- useful for avoiding datasets, model files, logs, and generated artifacts
+
+```text
+mixed-line-ending
+```
+
+- normalizes line endings
+- important because this project is developed on Windows but CI runs on Linux
+
+```text
+ruff-check
+```
+
+- runs fast linting
+- catches unused imports, import sorting issues, and common Python mistakes
+
+```text
+ruff-format
+```
+
+- formats code consistently
+- replaces the need to argue about style manually
+
+```text
+mypy
+```
+
+- checks types
+- helps catch mistakes before runtime
+
+#### Q. Which branches do pre-commit hooks affect?
+
+Pre-commit affects the branch you are committing on locally.
+
+Examples:
+
+```text
+commit on feat/tools -> hooks run on feat/tools
+commit on dev -> hooks run on dev
+commit on main -> hooks run on main
+```
+
+Why:
+
+- Hooks are local Git behavior.
+- They do not belong to one branch.
+- They run whenever you commit in this repository after installation.
+
+Important:
+
+- `.pre-commit-config.yaml` is committed.
+- `.git/hooks/pre-commit` is not committed.
+- On a new machine, run:
+
+```bash
+uv sync
+uv run pre-commit install
+```
+
+#### Q. What should I do when pre-commit modifies files?
+
+Sometimes hooks automatically fix files.
+
+Example:
+
+```text
+trim trailing whitespace........Failed
+- files were modified by this hook
+```
+
+Then run:
+
+```bash
+git status
+git add <fixed-files>
+git commit -m "your message"
+```
+
+Why:
+
+- Pre-commit changed files to make them compliant.
+- You must stage those changes before committing.
+
+#### Q. Why do industry teams use pre-commit?
+
+Industry teams use pre-commit because:
+
+- it shifts quality checks earlier
+- it reduces CI failures
+- it keeps formatting consistent
+- it avoids review comments about whitespace and imports
+- it helps developers catch mistakes before pushing
+
+The professional workflow is:
+
+```text
+pre-commit catches local issues
+CI confirms the repo works in a clean remote environment
+PR review checks architecture and business logic
+```
+
+---
+
+## Testing Strategy
+
+#### Q. What is software testing?
+
+Software testing is the practice of verifying that code behaves as expected under defined conditions. In professional engineering workflows, tests act as executable specifications: they document expected behavior, protect against regressions, and provide confidence that changes can be integrated safely.
+
+In this project, tests are used to verify:
+
+- individual tool behavior
+- pipeline orchestration
+- mocked external API interactions
+- import safety
+- baseline code quality through coverage
+
+Why:
+
+- Agentic AI systems depend on multiple moving parts: LLMs, tools, search APIs, scraping, chains, and orchestration logic.
+- Testing protects the deterministic engineering layer around the non-deterministic AI layer.
+- Industry teams use tests to make refactoring safer and to prevent production regressions.
+
+#### Q. What tests were added for the current code?
+
+Current test files:
+
+```text
+tests/conftest.py
+tests/test_tools.py
+tests/test_research_pipeline.py
+```
+
+What they cover:
+
+```text
+test_tools.py
+```
+
+- tests `web_search`
+- tests `scrape_url`
+- mocks Tavily
+- mocks network requests
+- avoids real API calls
+
+```text
+test_research_pipeline.py
+```
+
+- tests the pipeline orchestration
+- mocks search agent
+- mocks research agent
+- mocks writer chain
+- mocks critic chain
+- verifies data moves through the workflow correctly
+
+```text
+conftest.py
+```
+
+- sets test environment variables
+- prevents imports from failing because API keys are missing
+
+#### Q. Why do we mock OpenAI, Tavily, and network calls in tests?
+
+Mocks are controlled replacements for real dependencies. They allow tests to simulate external systems such as OpenAI, Tavily, HTTP requests, databases, or file systems without actually calling those services.
+
+Normal CI tests should be deterministic:
+
+```text
+same code + same test inputs -> same test result
+```
+
+Mocked tests avoid:
+
+- API costs
+- rate limits
+- internet failures
+- flaky search results
+- changing web pages
+- secret leakage
+- slow test runs
+
+Why industry teams do this:
+
+- CI must be reliable.
+- Tests should fail because code is broken, not because a website is down.
+- External-service tests are useful, but they should be separated from normal unit tests.
+- Mocked tests are cheaper, faster, safer, and easier to debug.
+- Live-service tests are usually run separately as scheduled checks, staging checks, or explicit integration tests.
+
+#### Q. How do I run all tests?
+
+Command:
+
+```bash
+uv run pytest
+```
+
+Why:
+
+- Runs all tests discovered under `tests/`.
+- Uses the uv-managed project environment.
+
+#### Q. How do I run tests with coverage?
+
+Command:
+
+```bash
+uv run pytest --cov --cov-report=term-missing
+```
+
+Why:
+
+- `--cov` measures how much application code tests execute.
+- `--cov-report=term-missing` shows which lines are not covered.
+
+Current coverage threshold in `pyproject.toml`:
+
+```text
+fail_under = 40
+```
+
+Why:
+
+- This project is early.
+- A realistic early threshold prevents fake-strict CI.
+- As the project matures, raise the threshold.
+
+Suggested future targets:
+
+```text
+early prototype: 40-60%
+serious portfolio project: 70-80%
+production-critical code: 80-90%+
+```
+
+#### Q. How do I run only unit tests?
+
+Current unit-style tests:
+
+```bash
+uv run pytest tests/test_tools.py
+```
+
+Why:
+
+- These tests isolate individual tools.
+- They are fast.
+- They mock external dependencies.
+
+#### Q. How do I run integration-style tests?
+
+Current integration-style test:
+
+```bash
+uv run pytest tests/test_research_pipeline.py
+```
+
+Why:
+
+- It checks multiple components working together.
+- It verifies the pipeline passes state from search to scrape to writer to critic.
+- It still mocks LLM/API calls so it can run safely in CI.
+
+#### Q. What is the difference between unit, integration, and end-to-end tests?
+
+Unit tests:
+
+```text
+Tests that verify one small function, class, or module in isolation.
+```
+
+Example:
+
+```text
+web_search formats Tavily results correctly
+```
+
+Why:
+
+- They are fast.
+- They are precise.
+- They are easy to debug.
+- They help identify exactly which unit of logic broke.
+
+Integration tests:
+
+```text
+Tests that verify multiple components working together through their real interfaces.
+```
+
+Example:
+
+```text
+research pipeline calls agents and chains in the right order
+```
+
+Why:
+
+- They catch wiring problems between modules.
+- They prove components cooperate correctly.
+- They are especially important in agentic systems where tools, agents, chains, and state must pass data correctly.
+
+End-to-end tests:
+
+```text
+Tests that verify the system from the user's perspective across the full application path.
+```
+
+Example future tests:
+
+```text
+run API endpoint -> trigger agent workflow -> receive final report
+open Streamlit UI -> submit query -> see result
+```
+
+Why:
+
+- They are closest to real user behavior.
+- They validate that the whole system works together.
+- They are slower and more fragile than unit tests.
+- Teams usually maintain fewer end-to-end tests than unit or integration tests.
+
+#### Q. Do tests change when code changes?
+
+Yes.
+
+Tests are living documentation of expected behavior.
+
+When code behavior changes intentionally:
+
+```text
+update the code
+update the tests
+run the test suite
+commit both together
+```
+
+Why:
+
+- Tests should describe what the system is supposed to do now.
+- Old tests may become incorrect if the intended behavior changed.
+
+#### Q. Can test updates be automated?
+
+Running tests can be automated.
+
+Writing meaningful tests cannot be fully automated.
+
+Automated:
+
+- CI runs tests on push and PR
+- coverage is calculated automatically
+- lint/type checks run automatically
+- pre-commit runs local checks before commit
+
+Not fully automated:
+
+- deciding expected behavior
+- designing good assertions
+- deciding what should be mocked
+- deciding what should be a unit vs integration test
+
+Why:
+
+- Tests are engineering judgment.
+- Tools can execute tests, but humans define what correctness means.
+
+#### Q. What testing setup is Munich/industry-ready for Agentic AI projects?
+
+A strong Agentic AI testing strategy should include:
+
+```text
+unit tests
+integration tests
+end-to-end tests
+mocked LLM tests
+retrieval quality tests
+prompt regression tests
+evaluation datasets
+latency checks
+cost checks
+observability checks
+```
+
+For this project, the next test layers should be:
+
+1. Tool tests
+
+```text
+web search, scraping, parsing, caching, retries
+```
+
+2. Pipeline/graph tests
+
+```text
+agent orchestration, routing, state transitions, fallback paths
+```
+
+3. Retrieval tests
+
+```text
+chunking, vector search, reranking, citation coverage
+```
+
+4. Evaluation tests
+
+```text
+does the report cite sources?
+does it avoid unsupported claims?
+does it meet quality thresholds?
+```
+
+5. API/UI smoke tests
+
+```text
+FastAPI starts
+Streamlit page loads
+basic user flow works
+```
+
+Why industry teams care:
+
+- Agentic systems can fail silently.
+- LLM outputs vary.
+- External tools fail.
+- Search results change.
+- Retrieval can return irrelevant context.
+- CI tests protect basic engineering correctness.
+- Evaluation pipelines protect AI output quality.
+
+#### Q. What are the main local quality commands for this project?
+
+Install/sync dependencies:
+
+```bash
+uv sync
+```
+
+Run lint:
+
+```bash
+uv run ruff check .
+```
+
+Run formatter:
+
+```bash
+uv run ruff format .
+```
+
+Run type checking:
+
+```bash
+uv run mypy src
+```
+
+Run tests:
+
+```bash
+uv run pytest
+```
+
+Run tests with coverage:
+
+```bash
+uv run pytest --cov --cov-report=term-missing
+```
+
+Run pre-commit hooks:
+
+```bash
+uv run pre-commit run --all-files
+```
+
+Run compile check:
+
+```bash
+uv run python -m compileall src main.py ui
+```
+
+Why:
+
+- These commands cover installability, syntax, formatting, linting, typing, tests, and coverage.
+- Together, they form the local equivalent of CI.
