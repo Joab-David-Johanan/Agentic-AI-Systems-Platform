@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "research_system"
 version = "0.1.0"
 description = "Multi-Agent Research System"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "langchain>=0.2.0",
     "langchain-core>=0.2.0",
@@ -21,7 +21,56 @@ dependencies = [
     "lxml>=5.0.0",
     "python-dotenv>=1.0.0",
     "rich>=13.7.0",
+    "langchain-groq>=1.1.2",
+    "langgraph>=1.2.0",
+    "fastapi>=0.136.1",
+    "uvicorn>=0.47.0",
 ]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[dependency-groups]
+dev = [
+    "mypy>=2.1.0",
+    "pre-commit>=4.6.0",
+    "pytest>=9.0.3",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.15.13",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "."]
+markers = [
+    "unit: fast tests for isolated functions and modules",
+    "integration: tests that verify multiple components working together",
+]
+
+[tool.coverage.run]
+source = ["src/research_system", "apps/api"]
+branch = true
+omit = [
+    "tests/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+fail_under = 40
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src/research_system", "apps/api"]
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true
