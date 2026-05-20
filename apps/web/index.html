@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agentic AI Systems Platform</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="workspace">
+        <aside class="control-rail">
+          <div class="brand-block">
+            <div class="brand-mark" aria-hidden="true">AI</div>
+            <div>
+              <p class="eyebrow">Agentic AI Systems Platform</p>
+              <h1>Workflow cockpit</h1>
+            </div>
+          </div>
+
+          <form class="control-panel" id="workflow-form">
+            <label class="field">
+              <span>Question</span>
+              <textarea id="question" rows="7">Compare recent agentic AI orchestration patterns and summarize reliability tradeoffs for production systems.</textarea>
+            </label>
+
+            <fieldset class="field">
+              <legend>Agent runtime</legend>
+              <div class="segmented-control" data-control="runtime">
+                <button type="button" class="selected" data-value="langchain">LangChain</button>
+                <button type="button" data-value="langgraph">LangGraph</button>
+              </div>
+            </fieldset>
+
+            <fieldset class="field">
+              <legend>Model provider</legend>
+              <div class="segmented-control" data-control="provider">
+                <button type="button" class="selected" data-value="openai">OpenAI</button>
+                <button type="button" data-value="groq">Groq</button>
+              </div>
+            </fieldset>
+
+            <label class="range-field">
+              <span>Retrieval depth</span>
+              <strong id="depth-value">4</strong>
+              <input id="retrieval-depth" type="range" min="1" max="8" value="4" />
+            </label>
+
+            <label class="toggle-field">
+              <span>Strict guardrails</span>
+              <input id="strict-guardrails" type="checkbox" checked />
+            </label>
+
+            <div class="action-row">
+              <button class="secondary-run" type="button" id="reset-run">Reset</button>
+              <button class="primary-run" type="submit" id="start-run">Run</button>
+            </div>
+          </form>
+        </aside>
+
+        <section class="main-stage">
+          <header class="stage-header">
+            <div>
+              <p class="eyebrow">Live execution graph</p>
+              <h2 id="run-title">LangChain agent run</h2>
+            </div>
+            <div class="run-status" id="run-status" data-state="idle">
+              <span class="status-dot"></span>
+              <span>Idle</span>
+            </div>
+          </header>
+
+          <section class="workflow-graph" id="workflow-graph" aria-label="Workflow execution graph"></section>
+
+          <section class="lower-grid">
+            <section class="panel event-log">
+              <div class="panel-heading">
+                <span aria-hidden="true">::</span>
+                <h3>Execution trace</h3>
+              </div>
+              <div class="event-list" id="event-list">
+                <p class="empty-state">Run the workflow to stream node-level events.</p>
+              </div>
+            </section>
+
+            <section class="panel insight-panel">
+              <div class="panel-heading">
+                <span aria-hidden="true">##</span>
+                <h3>Run summary</h3>
+              </div>
+
+              <div class="summary-grid">
+                <div>
+                  <span>Selected runtime</span>
+                  <strong id="summary-runtime">langchain</strong>
+                </div>
+                <div>
+                  <span>Provider</span>
+                  <strong id="summary-provider">openai</strong>
+                </div>
+                <div>
+                  <span>Active node</span>
+                  <strong id="summary-node">none</strong>
+                </div>
+              </div>
+
+              <div class="answer-box">
+                <span aria-hidden="true">TXT</span>
+                <p id="final-answer">The final answer will appear here after the synthesis node completes.</p>
+              </div>
+
+              <div class="tool-row">tools: web_search, scrape_url</div>
+            </section>
+          </section>
+        </section>
+
+        <aside class="signal-rail">
+          <div class="metric-strip">
+            <div class="metric">
+              <span>Guardrails</span>
+              <strong id="metric-guardrails">Strict</strong>
+            </div>
+            <div class="metric">
+              <span>Runtime</span>
+              <strong id="metric-runtime">langchain</strong>
+            </div>
+            <div class="metric">
+              <span>Model</span>
+              <strong id="metric-provider">openai</strong>
+            </div>
+          </div>
+
+          <div class="trace-panel">
+            <div class="panel-heading">
+              <span aria-hidden="true">OK</span>
+              <h3>Quality gates</h3>
+            </div>
+            <ul>
+              <li>Prompt validation before model calls</li>
+              <li>Model and tool schema checks</li>
+              <li>Observable node-level execution</li>
+              <li>Answer metadata for used tools</li>
+            </ul>
+          </div>
+        </aside>
+      </section>
+    </main>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
