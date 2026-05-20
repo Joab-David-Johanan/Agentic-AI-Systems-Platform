@@ -9,8 +9,8 @@ Usage:
 """
 
 import os
-import sys
 import shutil
+import sys
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 PKG = "research_system"
@@ -143,9 +143,7 @@ def scaffold() -> None:
 
 
 def teardown() -> None:
-    answer = input(
-        "Delete all scaffolded files and folders? Type 'yes' to confirm: "
-    ).strip()
+    answer = input("Delete all scaffolded files and folders? Type 'yes' to confirm: ").strip()
     if answer != "yes":
         print("Aborted.")
         return
