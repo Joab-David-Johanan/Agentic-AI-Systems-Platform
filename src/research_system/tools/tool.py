@@ -1,12 +1,13 @@
 import os
 import re
+
 import requests
 import trafilatura
-from langchain.tools import tool
-from tavily import TavilyClient
 from bs4 import BeautifulSoup
-from readability import Document
 from dotenv import load_dotenv
+from langchain.tools import tool
+from readability import Document
+from tavily import TavilyClient
 
 load_dotenv()
 tavily = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
@@ -25,9 +26,7 @@ def web_search(query: str) -> str:
     out = []
 
     for r in results["results"]:
-        out.append(
-            f"Title: {r["title"]}\nURL: {r["url"]}\nSnippet: {r["content"][:300]}\n"
-        )
+        out.append(f"Title: {r['title']}\nURL: {r['url']}\nSnippet: {r['content'][:300]}\n")
     return "\n------\n".join(out)
 
 
@@ -65,9 +64,7 @@ def scrape_url(url: str) -> str:
         # ──────────────────────────────────────────────────
         # Strategy 1 → trafilatura (BEST for articles/blogs)
         # ──────────────────────────────────────────────────
-        extracted = trafilatura.extract(
-            html, include_comments=False, include_tables=False
-        )
+        extracted = trafilatura.extract(html, include_comments=False, include_tables=False)
 
         if extracted and len(extracted.strip()) > 200:
             cleaned = re.sub(r"\s+", " ", extracted)
@@ -81,9 +78,7 @@ def scrape_url(url: str) -> str:
 
         soup = BeautifulSoup(clean_html, "html.parser")
 
-        for tag in soup(
-            ["script", "style", "nav", "footer", "header", "aside", "form"]
-        ):
+        for tag in soup(["script", "style", "nav", "footer", "header", "aside", "form"]):
             tag.decompose()
 
         text = soup.get_text(separator=" ", strip=True)
@@ -97,9 +92,7 @@ def scrape_url(url: str) -> str:
         # ──────────────────────────────────────────────────
         soup = BeautifulSoup(html, "html.parser")
 
-        for tag in soup(
-            ["script", "style", "nav", "footer", "header", "aside", "form"]
-        ):
+        for tag in soup(["script", "style", "nav", "footer", "header", "aside", "form"]):
             tag.decompose()
 
         text = soup.get_text(separator=" ", strip=True)

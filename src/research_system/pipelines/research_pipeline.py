@@ -1,6 +1,6 @@
-from research_system.agents.search_agent import build_search_agent
 from research_system.agents.research_agent import build_research_agent
-from research_system.chains.summary_chain import writer_chain, critic_chain
+from research_system.agents.search_agent import build_search_agent
+from research_system.chains.summary_chain import critic_chain, writer_chain
 
 
 def run_research_pipeline(topic: str) -> dict:
@@ -63,9 +63,7 @@ def run_research_pipeline(topic: str) -> dict:
         f"DETAILED SCRAPED CONTENT : \n {state['scraped_content']}"
     )
 
-    state["report"] = writer_chain.invoke(
-        {"topic": topic, "research": research_combined}
-    )
+    state["report"] = writer_chain.invoke({"topic": topic, "research": research_combined})
 
     print("\n Final Report\n", state["report"])
 

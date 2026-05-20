@@ -45,12 +45,8 @@ def test_web_search_formats_tavily_results(monkeypatch):
 def test_scrape_url_uses_trafilatura_first(monkeypatch):
     extracted = "This is clean extracted article text. " * 20
 
-    monkeypatch.setattr(
-        tool_module.requests, "get", lambda *args, **kwargs: FakeResponse()
-    )
-    monkeypatch.setattr(
-        tool_module.trafilatura, "extract", lambda *args, **kwargs: extracted
-    )
+    monkeypatch.setattr(tool_module.requests, "get", lambda *args, **kwargs: FakeResponse())
+    monkeypatch.setattr(tool_module.trafilatura, "extract", lambda *args, **kwargs: extracted)
 
     result = tool_module.scrape_url.func("https://example.com/article")
 

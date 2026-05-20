@@ -1,6 +1,12 @@
-from research_system.models.model_selection import llm
-from langchain_core.prompts import ChatPromptTemplate
+from collections.abc import Callable
+from typing import Any
+
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+
+from research_system.models.model_selection import get_llm
+
+# writer_chain
 
 writer_prompt = ChatPromptTemplate.from_messages(
     [
@@ -28,7 +34,9 @@ Be detailed, factual and professional.""",
     ]
 )
 
-writer_chain = writer_prompt | llm | StrOutputParser()
+
+def build_writer_chain():
+    return writer_prompt | get_llm() | StrOutputParser()
 
 
 # critic_chain
@@ -64,4 +72,24 @@ One line verdict:
     ]
 )
 
-critic_chain = critic_prompt | llm | StrOutputParser()
+
+def build_critic_chain():
+    return critic_prompt | get_llm() | StrOutputParser()
+
+
+class LazyChain:
+    """Build an LLM chain only when it is first invoked."""
+
+    def __init__(self, builder: Callable[[], Any]):
+        self._builder = builder
+        self._chain: Any | None = None
+
+    def invoke(self, payload: dict) -> str:
+        if self._chain is None:
+            self._chain = self._builder()
+        chain = self._chain
+        return chain.invoke(payload)
+
+
+writer_chain = LazyChain(build_writer_chain)
+critic_chain = LazyChain(build_critic_chain)
